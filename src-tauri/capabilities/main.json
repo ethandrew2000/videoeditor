@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "main-capability",
+  "description": "Framewave Studio has no native command bridge enabled.",
+  "windows": ["main"],
+  "permissions": []
+}

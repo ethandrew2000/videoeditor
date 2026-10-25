@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta
+      http-equiv="Content-Security-Policy"
+    content="default-src 'self' blob: data:; script-src 'self' blob: 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' blob: data:; media-src 'self' blob: data:; worker-src 'self' blob:; connect-src 'self' blob:;"
+    >
+    <meta name="theme-color" content="#111318">
+    <title>Framewave Studio</title>
+    <link rel="stylesheet" href="./src/styles.css">
+    <script type="module" src="./src/app.js"></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <a class="brand" href="#" aria-label="Framewave Studio home">
+          <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+          <span>framewave</span>
+          <span class="brand-edition">STUDIO</span>
+        </a>
+        <div class="project-title">
+          <span class="project-dot" aria-hidden="true"></span>
+          <span id="project-name">Untitled project</span>
+          <span class="save-status" id="save-status">RESTORING</span>
+        </div>
+        <div class="top-actions">
+          <button class="button button-quiet" id="open-project" type="button">Open project</button>
+          <button class="button button-quiet" id="save-project" type="button">Save project</button>
+          <input id="project-input" type="file" accept=".framewave,.json,application/json" hidden>
+          <input id="file-input" type="file" accept="audio/*,video/*" multiple hidden>
+          <button class="button button-quiet" id="new-project" type="button">New project</button>
+          <a class="button button-quiet" id="windows-download" href="./downloads/framewave-studio-windows-x64-setup.exe" download hidden>Windows app</a>
+          <select id="export-preset" aria-label="Export preset" title="Choose export profile">
+            <option value="sequence">Sequence profile</option>
+            <option value="web-720">Web 720p</option>
+            <option value="archive-1080">High quality 1080p</option>
+          </select>
+          <button class="button button-accent" id="export-button" type="button" title="Render an MP4 with the selected export preset">Export <span aria-hidden="true">↗</span></button>
+        </div>
+      </header>
+
+      <div class="workspace" data-workspace="media">
+        <nav class="tool-rail" aria-label="Workspace">
+          <button class="rail-button active" type="button" aria-label="Media workspace" title="Media" aria-pressed="true" data-workspace="media"><span aria-hidden="true">▧</span><small>MEDIA</small></button>
+          <button class="rail-button" type="button" aria-label="Edit workspace" title="Edit" aria-pressed="false" data-workspace="edit"><span aria-hidden="true">▤</span><small>EDIT</small></button>
+          <button class="rail-button" type="button" aria-label="Audio workspace" title="Audio" aria-pressed="false" data-workspace="audio"><span aria-hidden="true">♫</span><small>AUDIO</small></button>
+          <div class="rail-bottom"><span class="avatar">FW</span></div>
+        </nav>
+
+        <aside class="media-panel panel">
+          <div class="panel-heading">
+            <div>
+              <span class="eyebrow">PROJECT</span>
+              <h1>Media library</h1>
+            </div>
+            <button class="icon-button" id="import-button" type="button" aria-label="Import media" title="Import media">＋</button>
+          </div>
+          <div class="library-search">
+            <span aria-hidden="true">⌕</span>
+            <input id="search-input" type="search" placeholder="Find media" aria-label="Find media">
+            <kbd>⌘ K</kbd>
+          </div>
+          <div class="library-tabs" role="tablist" aria-label="Media filters">
+            <button class="filter-tab active" data-filter="all" type="button" role="tab" aria-selected="true">All <span id="all-count">0</span></button>
+            <button class="filter-tab" data-filter="video" type="button" role="tab" aria-selected="false">Video</button>
+            <button class="filter-tab" data-filter="audio" type="button" role="tab" aria-selected="false">Audio</button>
+          </div>
+          <div class="media-list" id="media-list" aria-live="polite">
+            <div class="empty-library" id="empty-library">
+              <span class="empty-icon" aria-hidden="true">＋</span>
+              <strong>Your library is ready</strong>
+              <p>Bring in video or audio to start a new cut.</p>
+              <button class="button button-outline" id="empty-import" type="button">Import media</button>
+              <span class="drop-hint">or drop files here</span>
+            </div>
+          </div>
+          <div class="panel-footer"><span class="storage-dot"></span><span id="library-summary">0 items · files stay on this device</span></div>
+        </aside>
+
+        <main class="edit-area">
+          <section class="viewer-section">
+            <div class="viewer-toolbar">
+              <div class="section-label"><span class="live-dot"></span> SOURCE VIEWER <span class="divider">/</span> <span id="viewer-source">No source selected</span></div>
+              <button class="icon-button small-icon" id="fit-button" type="button" title="Fit preview">⤢</button>
+            </div>
+            <div class="viewer-stage" id="viewer-stage">
+              <video id="video-preview" playsinline preload="metadata" hidden></video>
+              <div id="video-title-overlay" class="video-title-overlay" hidden></div>
+              <audio id="audio-preview" preload="metadata" hidden></audio>
+              <div class="viewer-empty" id="viewer-empty">
+                <div class="empty-art" aria-hidden="true"><span></span><span></span><span></span></div>
+                <p>Choose a clip from your library</p>
+                <small>Your source preview will appear here</small>
+              </div>
+              <div class="audio-artwork" id="audio-artwork" hidden>
+                <div class="disc" aria-hidden="true"><span></span></div>
+                <span class="eyebrow">AUDIO SOURCE</span>
+                <strong id="audio-source-name">Audio preview</strong>
+                <div class="audio-wave" aria-hidden="true"></div>
+              </div>
+              <div class="viewer-timecode" id="viewer-timecode">00:00:00:00</div>
+            </div>
+            <div class="transport">
+              <div class="transport-left">
+                <button class="icon-button transport-icon" id="skip-back" type="button" aria-label="Go to start" title="Go to start">|◀</button>
+                <button class="play-button" id="play-button" type="button" aria-label="Play" title="Play">▶</button>
+                <button class="icon-button transport-icon" id="skip-end" type="button" aria-label="Go to end" title="Go to end">▶|</button>
+                <span class="transport-time"><span id="current-time">00:00</span><span class="time-slash">/</span><span id="duration-time">00:00</span></span>
+              </div>
+              <div class="scrub-control">
+                <input id="seek-slider" type="range" min="0" max="1000" value="0" aria-label="Seek source">
+              </div>
+              <div class="transport-right">
+                <button class="icon-button transport-icon" id="mute-button" type="button" aria-label="Mute preview" title="Mute preview">◖</button>
+                <input id="volume-slider" class="volume-slider" type="range" min="0" max="1" step="0.01" value="0.85" aria-label="Preview volume">
+                <span class="zoom-label">FIT</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="timeline-section">
+            <div class="timeline-heading">
+              <div>
+                <span class="eyebrow">SEQUENCE 01</span>
+                <h2>Timeline</h2>
+              </div>
+              <div class="timeline-actions">
+                <button class="button button-quiet timeline-history" id="undo-button" type="button" title="Undo (Ctrl+Z)" disabled>↶</button>
+                <button class="button button-quiet timeline-history" id="redo-button" type="button" title="Redo (Ctrl+Shift+Z)" disabled>↷</button>
+                <span class="timeline-mode"><span class="mode-dot"></span><span id="timeline-playback-mode">EDIT MODE</span></span>
+                <button class="button button-quiet" id="split-at-playhead" type="button" title="Split selected clip at playhead (S)" disabled>Split</button>
+                <button class="button button-quiet" id="link-clips" type="button" title="Ctrl/Cmd-click one video and one audio clip, then link them" disabled>Link clips</button>
+                <button class="button button-quiet" id="unlink-clips" type="button" title="Unlink selected clips" disabled>Unlink</button>
+                <button class="button button-quiet" id="sequence-settings-button" type="button">Sequence settings</button>
+                <button class="button button-outline add-timeline-button" id="add-selected" type="button" disabled>＋ Add to timeline</button>
+                <button class="button button-outline add-track-button" id="add-audio-track" type="button" title="Add audio track">＋ Audio track</button>
+                <button class="button button-outline add-track-button" id="add-video-track" type="button" title="Add video track">＋ Video track</button>
+                <label class="snap-toggle"><input id="snap-toggle" type="checkbox" checked> Snap</label>
+                <label class="snap-toggle ripple-toggle" title="Ripple-delete selected clips and move later clips forward on the same track"><input id="ripple-toggle" type="checkbox"> Ripple</label>
+              </div>
+            </div>
+            <div class="timeline-canvas" id="timeline-canvas">
+              <div class="timeline-ruler-row">
+                <div class="track-gutter ruler-gutter"><span>00:00</span></div>
+                <div class="ruler" id="timeline-ruler" aria-label="Timeline ruler"></div>
+              </div>
+              <div id="track-rows"></div>
+              <div class="playhead" id="playhead" aria-hidden="true"><span></span></div>
+            </div>
+            <div class="timeline-footer">
+              <span>              <span id="timeline-summary">No clips in timeline</span> <span id="export-status" role="status"></span><progress id="export-progress" max="100" value="0" hidden></progress><button class="button button-quiet" id="cancel-export" type="button" hidden>Cancel operation</button></span>
+              <div class="timeline-zoom"><button id="zoom-out" type="button" aria-label="Zoom out">−</button><span id="zoom-level">100%</span><button id="zoom-in" type="button" aria-label="Zoom in">＋</button></div>
+            </div>
+          </section>
+        </main>
+
+        <aside class="inspector-panel panel">
+          <div class="panel-heading inspector-heading"><div><span class="eyebrow">CLIP DETAILS</span><h2>Inspector</h2></div><span class="inspector-menu">···</span></div>
+          <div class="inspector-content" id="inspector-content">
+            <div class="inspector-empty"><span aria-hidden="true">⌁</span><strong>Nothing selected</strong><p>Select media or a timeline clip to view its details.</p></div>
+          </div>
+          <div class="inspector-bottom">
+            <div class="bottom-label"><span class="eyebrow">QUICK GUIDE</span><span class="guide-icon" aria-hidden="true">i</span></div>
+            <p>Shortcuts: S splits at the playhead; J/K/L shuttles backward, pauses, or plays forward; ←/→ steps a frame. Ctrl/Cmd-click an aligned video and audio pair to link them. Enable Ripple to close a deleted gap on that track.</p>
+            <a href="./ROADMAP.md" target="_blank" rel="noreferrer">See what’s next <span aria-hidden="true">↗</span></a>
+          </div>
+        </aside>
+      </div>
+      <dialog id="sequence-settings-dialog" class="sequence-settings-dialog">
+        <form method="dialog" id="sequence-settings-form">
+          <h2>Sequence settings</h2>
+          <p>These settings define the timeline frame rate and export canvas.</p>
+          <label>Width <input id="sequence-width" type="number" min="160" max="3840" step="2" required></label>
+          <label>Height <input id="sequence-height" type="number" min="160" max="2160" step="2" required></label>
+          <label>Frame rate
+            <select id="sequence-frame-rate">
+              <option value="23.976">23.976 fps</option><option value="24">24 fps</option><option value="25">25 fps</option>
+              <option value="29.97">29.97 fps</option><option value="30">30 fps</option><option value="50">50 fps</option>
+              <option value="59.94">59.94 fps</option><option value="60">60 fps</option>
+            </select>
+          </label>
+          <label>Pixel aspect
+            <select id="sequence-pixel-aspect">
+              <option value="1">Square (1:1)</option><option value="1.333333">4:3</option><option value="1.2">6:5</option>
+              <option value="1.066667">16:15</option><option value="0.888889">9:10</option>
+            </select>
+          </label>
+          <div class="dialog-actions">
+            <button class="button button-quiet" type="submit" value="cancel">Cancel</button>
+            <button class="button button-accent" type="submit" value="save">Apply</button>
+          </div>
+        </form>
+      </dialog>
+      <footer class="statusbar"><span><span class="status-dot"></span> Ready</span><span>FRAMEWAVE STUDIO <b>·</b> BROWSER EDITOR</span></footer>
+    </div>
+  </body>
+</html>

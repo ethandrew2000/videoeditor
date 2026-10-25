@@ -1,0 +1,75 @@
+name: Windows desktop build
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  windows-installer:
+    runs-on: windows-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Windows installer
+        run: npm run desktop:build:windows
+
+      - name: Stage browser download
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem "src-tauri/target/release/bundle/nsis/*.exe" |
+            Select-Object -First 1
+          if (-not $installer) {
+            throw "Tauri did not produce the expected NSIS Windows installer."
+          }
+          $downloadDirectory = "dist/downloads"
+          New-Item -ItemType Directory -Force -Path $downloadDirectory | Out-Null
+          Copy-Item $installer.FullName "$downloadDirectory/framewave-studio-windows-x64-setup.exe"
+          "installer=$($installer.FullName)" >> $env:GITHUB_OUTPUT
+        id: stage
+
+      - name: Upload installer and browser bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: framewave-studio-windows-x64
+          path: |
+            ${{ steps.stage.outputs.installer }}
+            dist/**
+          if-no-files-found: error
+
+      - name: Publish installer release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          $tag = $env:GITHUB_REF_NAME
+          $installer = "dist/downloads/framewave-studio-windows-x64-setup.exe"
+          gh release view $tag *> $null
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload $tag $installer --clobber
+          } else {
+            gh release create $tag $installer `
+              --title "Framewave Studio $tag" `
+              --generate-notes
+          }
+          if ($LASTEXITCODE -ne 0) {
+            throw "Could not publish the Windows installer release."
+          }
