@@ -31,7 +31,6 @@ import { validateProject } from "./project-format.mjs";
     audioSourceName: document.querySelector("#audio-source-name"),
     allCount: document.querySelector("#all-count"),
     workspace: document.querySelector(".workspace"),
-    windowsDownload: document.querySelector("#windows-download"),
     currentTime: document.querySelector("#current-time"),
     durationTime: document.querySelector("#duration-time"),
     emptyLibrary: document.querySelector("#empty-library"),
@@ -170,11 +169,6 @@ import { validateProject } from "./project-format.mjs";
     }
     previewLayers.clear();
   };
-  if (window.location.protocol !== "tauri:" && window.location.protocol !== "file:") {
-    fetch(elements.windowsDownload.href, { method: "HEAD" })
-      .then((response) => { elements.windowsDownload.hidden = !response.ok; })
-      .catch(() => { elements.windowsDownload.hidden = true; });
-  }
 
   const openDatabase = () => {
     if (!("indexedDB" in window)) return Promise.reject(new Error("This browser does not support local project storage."));
